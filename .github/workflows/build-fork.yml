@@ -1,0 +1,70 @@
+name: Build (fork, Windows only)
+
+# Minimal Windows build for this fork: no Google/GCS auth, no symbol upload,
+# no installer. Produces the plugin DLL as a downloadable artifact.
+# Crash handler is "none" so a locally patched build never reports to
+# StreamElements' Sentry project, and OBS's own crash handler stays in charge.
+
+on:
+  push:
+    branches:
+      - fix/**
+  workflow_dispatch:
+
+jobs:
+  windows:
+    runs-on: windows-2025-vs2026
+    env:
+      CHECKOUT: 32.2.1
+      BUILD_OPTIONS: >-
+        -DENABLE_DECKLINK=OFF -DENABLE_SYPHON=OFF -DENABLE_LIBFDK=OFF
+        -DENABLE_NVENC=OFF -DENABLE_QSV11=OFF -DENABLE_VST=OFF
+        -DENABLE_WEBRTC=OFF -DENABLE_WEBSOCKET=OFF -DENABLE_OSS=OFF
+        -DENABLE_SNDIO=OFF -DENABLE_VLC=OFF -DENABLE_VIRTUALCAM=OFF
+        -DENABLE_TEST_INPUT=OFF -DENABLE_AJA=OFF -DENABLE_SCRIPTING=OFF
+        -DENABLE_SCRIPTING_LUA=OFF -DENABLE_UI=OFF
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: microsoft/setup-msbuild@30375c66a4eea26614e0d39710365f22f8b0af57 # v3
+
+      - name: Clone OBS Studio
+        shell: cmd
+        run: |
+          mkdir C:\local
+          git clone --recursive --depth 1 --branch %CHECKOUT% --shallow-submodules https://github.com/obsproject/obs-studio.git C:\local\obs-studio
+
+      - name: Install plugin into OBS tree
+        shell: cmd
+        run: |
+          mkdir C:\local\obs-studio\plugins\obs-streamelements-core
+          xcopy "%GITHUB_WORKSPACE%\*.*" "C:\local\obs-studio\plugins\obs-streamelements-core" /S /E /I /Y
+          echo add_obs_plugin(obs-streamelements-core) > C:\local\obs-studio\plugins\CMakeLists.txt
+
+      - name: Version
+        shell: powershell
+        run: |
+          "#define STREAMELEMENTS_PLUGIN_VERSION 20261006001039L" |
+            Out-File C:\local\obs-studio\plugins\obs-streamelements-core\streamelements\Version.generated.hpp
+
+      - name: Configure
+        shell: cmd
+        run: |
+          copy C:\local\obs-studio\plugins\obs-streamelements-core\CMakeUserPresets.json C:\local\obs-studio\CMakeUserPresets.json
+          del C:\local\obs-studio\plugins\obs-streamelements-core\CMakeUserPresets.json
+          cd /d C:\local\obs-studio
+          cmake --preset=windows-x64-streamelements -DSTREAMELEMENTS_CRASH_HANDLER=none %BUILD_OPTIONS%
+
+      - name: Build
+        shell: cmd
+        run: |
+          cd /d C:\local\obs-studio
+          cmake --build build_x64 --config RelWithDebInfo --target obs-streamelements-core
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: obs-streamelements-core-parcheado
+          path: |
+            C:\local\obs-studio\build_x64\rundir\RelWithDebInfo\obs-plugins\64bit\obs-streamelements-core.dll
+            C:\local\obs-studio\build_x64\rundir\RelWithDebInfo\obs-plugins\64bit\obs-streamelements-core.pdb
+          if-no-files-found: error

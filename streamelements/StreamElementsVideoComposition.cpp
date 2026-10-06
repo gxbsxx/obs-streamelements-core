@@ -1,4 +1,6 @@
 #include "StreamElementsVideoComposition.hpp"
+
+#include <algorithm>
 #include <obs-frontend-api.h>
 #include <util/config-file.h>
 
@@ -1748,83 +1750,71 @@ void StreamElementsCustomVideoComposition::SetTransitionDurationMilliseconds(
 	dispatch_transition_changed_event(this);
 }
 
-bool StreamElementsCustomVideoComposition::SetCurrentScene(obs_scene_t* scene)
+bool StreamElementsCustomVideoComposition::SetCurrentScene(obs_scene_t *scene)
 {
 	if (!scene)
 		return false;
 
-	std::shared_lock<decltype(m_mutex)> lock(m_mutex);
+	{
+		std::shared_lock<decltype(m_mutex)> lock(m_mutex);
 
-	for (auto item : m_scenes) {
-		if (scene == item) {
-			obs_scene_t *oldCurrentScene = nullptr;
-
-			{
-				std::unique_lock<decltype(m_currentSceneMutex)>
-					currentSceneLock(m_currentSceneMutex);
-
-				if (m_currentScene == scene)
-					return true;
-
-				{
-					auto source = obs_scene_get_source(
-						m_currentScene);
-					if (source) {
-						obs_source_dec_active(source);
-						obs_source_dec_showing(source);
-					}
-				}
-
-				obs_transition_start(
-					m_transition, OBS_TRANSITION_MODE_AUTO,
-					GetTransitionDurationMilliseconds(),
-					obs_scene_get_source(scene));
-
-				std::string transition_id =
-					obs_source_get_id(m_transition);
-
-				if (transition_id == "obs_stinger_transition") {
-					//
-					// You may be wondering what is going on here.
-					//
-					// Apparently, the STINGER transition, sets it's duration only after the
-					// first call to "obs_transition_start", and does not execute the first time it
-					// is being called, performing a CUT transition instead.
-					//
-					// Calling obs_transition_start() twice seems to fix this issue, and not
-					// interfere with other transition types.
-					//
-					// We will still execute it only for the STINGER transition just to be safe.
-					//
-					obs_transition_start(
-						m_transition,
-						OBS_TRANSITION_MODE_AUTO,
-						GetTransitionDurationMilliseconds(),
-						obs_scene_get_source(scene));
-				}
-
-				auto source = obs_scene_get_source(scene);
-				if (source) {
-					obs_source_inc_showing(source);
-					obs_source_inc_active(source);
-				}
-
-				oldCurrentScene = m_currentScene;
-				m_currentScene = SETRACE_ADDREF(
-					obs_scene_get_ref(scene));
-			}
-
-			if (oldCurrentScene) {
-				obs_canvas_scene_remove(oldCurrentScene);
-				obs_scene_release(
-					SETRACE_DECREF(oldCurrentScene));
-			}
-
-			return true;
-		}
+		if (std::find(m_scenes.begin(), m_scenes.end(), scene) ==
+		    m_scenes.end())
+			return false;
 	}
 
-	return false;
+	// Only swap the pointer under the lock. Everything below calls into
+	// libobs, which fires signals synchronously -- and the graphics thread
+	// fires "transition_stop" into handle_transition_stop(), which takes
+	// m_currentSceneMutex (shared) while holding that signal's mutex.
+	// Holding m_currentSceneMutex across obs_transition_start() deadlocked
+	// the UI and graphics threads (OBS freezes when a canvas uses a real
+	// transition, on toggle, on startup, and on fast scene switching).
+	obs_scene_t *oldCurrentScene = nullptr;
+	{
+		std::unique_lock<decltype(m_currentSceneMutex)> currentSceneLock(
+			m_currentSceneMutex);
+
+		if (m_currentScene == scene)
+			return true;
+
+		oldCurrentScene = m_currentScene;
+		m_currentScene = SETRACE_ADDREF(obs_scene_get_ref(scene));
+	}
+
+	OBSSourceAutoRelease transition =
+		SETRACE_AUTODECREF(GetTransitionRef());
+
+	if (auto oldSource = obs_scene_get_source(oldCurrentScene)) {
+		obs_source_dec_active(oldSource);
+		obs_source_dec_showing(oldSource);
+	}
+
+	auto source = obs_scene_get_source(scene);
+
+	obs_transition_start(transition, OBS_TRANSITION_MODE_AUTO,
+			     GetTransitionDurationMilliseconds(), source);
+
+	// The STINGER transition only picks up its duration on the first
+	// obs_transition_start() and performs a CUT that time; a second call
+	// makes it run properly and does not affect other transition types.
+	if (transition && std::string(obs_source_get_id(transition)) ==
+				  "obs_stinger_transition")
+		obs_transition_start(transition, OBS_TRANSITION_MODE_AUTO,
+				     GetTransitionDurationMilliseconds(),
+				     source);
+
+	if (source) {
+		obs_source_inc_showing(source);
+		obs_source_inc_active(source);
+	}
+
+	if (oldCurrentScene) {
+		obs_canvas_scene_remove(oldCurrentScene);
+		obs_scene_release(SETRACE_DECREF(oldCurrentScene));
+	}
+
+	return true;
 }
 
 void StreamElementsCustomVideoComposition::HandleObsSceneCollectionCleanup()
