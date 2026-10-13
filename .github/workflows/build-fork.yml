@@ -80,12 +80,13 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: v26.10.6.1039-arreglo1
+          TITLE: SE.Live 26.10.6.1039 Vertical Canvas Fix
         run: |
           gh release view $env:TAG 2>$null
-          if ($LASTEXITCODE -eq 0) { "$env:TAG ya estaba publicada"; exit 0 }
+          if ($LASTEXITCODE -eq 0) { gh release edit $env:TAG --title $env:TITLE --notes-file .github/RELEASE_FORK.md; exit $LASTEXITCODE } # ya existe: solo pone al día el título y la explicación
           $d = "C:\local\SE.Live-arreglado"
           New-Item -ItemType Directory $d | Out-Null
           Copy-Item C:\local\obs-studio\build_x64\rundir\RelWithDebInfo\obs-plugins\64bit\obs-streamelements-core.dll, C:\local\obs-studio\build_x64\rundir\RelWithDebInfo\obs-plugins\64bit\obs-streamelements-core.pdb, .github\LEEME.txt $d
           Compress-Archive -Path $d -DestinationPath C:\local\SE.Live-arreglado.zip
-          gh release create $env:TAG C:\local\SE.Live-arreglado.zip --target $env:GITHUB_SHA --title "SE.Live 26.10.6.1039 arreglado: OBS ya no se congela con el lienzo vertical" --notes-file .github/RELEASE_FORK.md
+          gh release create $env:TAG C:\local\SE.Live-arreglado.zip --target $env:GITHUB_SHA --title $env:TITLE --notes-file .github/RELEASE_FORK.md
           if ($LASTEXITCODE -ne 0) { throw "No se pudo publicar la versión" }
