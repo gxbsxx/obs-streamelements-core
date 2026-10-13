@@ -1,0 +1,14 @@
+SE.Live arreglado (fork no oficial de obs-streamelements-core)
+
+Qué arregla: OBS ya no se queda congelado al usar transiciones en el lienzo vertical,
+al abrir OBS con esa opción activa ni al cambiar de escena muy rápido.
+
+Cómo instalarlo:
+1. Ten instalado SE.Live oficial en OBS 32 (Windows).
+2. Cierra OBS.
+3. Copia obs-streamelements-core.dll (y .pdb) en
+   C:\Program Files\obs-studio\obs-plugins\64bit\
+   y elige Reemplazar. Guarda antes una copia del original.
+4. Abre OBS.
+
+Más información: https://github.com/gxbsxx/obs-streamelements-core

@@ -64,6 +64,7 @@ env:
 
 jobs:
   version:
+    if: github.repository == 'StreamElements/obs-streamelements-core' # en copias (forks) no hay claves para firmar ni publicar
     runs-on: ubuntu-latest
     outputs:
       version_encoded: ${{ steps.version_step.outputs.version_encoded }}

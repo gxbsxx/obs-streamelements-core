@@ -1,3 +1,42 @@
+# obs-streamelements-core — versión arreglada (fork)
+
+> **Esto no es el repositorio oficial de StreamElements.** Es una copia (fork) de
+> [StreamElements/obs-streamelements-core](https://github.com/StreamElements/obs-streamelements-core)
+> con **un único arreglo**. Todo lo demás es igual que el original.
+
+## 🇪🇸 Qué arregla
+
+Con SE.Live instalado, **OBS se quedaba congelado** (sin responder, había que cerrarlo a la fuerza), a veces en mitad de un directo, cuando un lienzo extra, como el **vertical**, usaba transiciones de verdad:
+
+- al activar «usar las transiciones de OBS» en el lienzo vertical;
+- al abrir OBS con esa opción ya activada;
+- al cambiar de escena muy rápido varias veces seguidas.
+
+**Por qué pasaba:** al cambiar de escena, SE.Live se quedaba «agarrando» la escena actual mientras le pedía a OBS que empezara la transición. Al mismo tiempo, OBS terminaba la transición anterior y necesitaba esa misma escena. Cada uno esperaba al otro y ninguno avanzaba.
+
+**El arreglo:** SE.Live suelta la escena antes de pedirle nada a OBS. El orden de las cosas y el comportamiento son los mismos; solo desaparece la espera infinita. Está en [`streamelements/StreamElementsVideoComposition.cpp`](streamelements/StreamElementsVideoComposition.cpp).
+
+## 🇪🇸 Cómo instalarlo
+
+1. Ten instalado SE.Live normal (la versión oficial) en OBS 32.
+2. Descarga **SE.Live-arreglado.zip** de [Releases](../../releases/latest).
+3. **Cierra OBS.**
+4. Copia `obs-streamelements-core.dll` (y `.pdb`) del zip en la carpeta de plugins de OBS, normalmente
+   `C:\Program Files\obs-studio\obs-plugins\64bit\`, y elige **Reemplazar**. Guarda antes una copia del archivo original por si quieres volver atrás.
+5. Abre OBS.
+
+Si actualizas SE.Live con su instalador oficial, se volverá a poner el archivo original: repite los pasos.
+
+## 🇬🇧 In English
+
+**Fixes:** OBS freezing (not crashing) with SE.Live when a custom canvas, such as the vertical one, uses a real transition: when enabling OBS transitions on the vertical canvas, on start-up with that option saved, and when switching scenes quickly. The cause was a lock-order deadlock between the UI thread (`SetCurrentScene` holding the current-scene lock across `obs_transition_start`) and the graphics thread (`transition_stop` → `GetCurrentSceneRef`). The fix releases the lock before calling into libobs.
+
+**Install:** close OBS, copy `obs-streamelements-core.dll` from **SE.Live-arreglado.zip** ([Releases](../../releases/latest)) over the one in `C:\Program Files\obs-studio\obs-plugins\64bit\`, and start OBS. Keep a backup of the original. Built for OBS 32 (Windows x64), with crash reporting disabled.
+
+---
+
+*Original README below.*
+
 # obs-streamelements-core
 
 Core SE.Live OBS plugin.
