@@ -14,11 +14,11 @@ Con SE.Live instalado, **OBS se quedaba congelado** (sin responder, había que c
 
 **Por qué pasaba:** al cambiar de escena, SE.Live se quedaba «agarrando» la escena actual mientras le pedía a OBS que empezara la transición. Al mismo tiempo, OBS terminaba la transición anterior y necesitaba esa misma escena. Cada uno esperaba al otro y ninguno avanzaba.
 
-**El arreglo:** SE.Live suelta la escena antes de pedirle nada a OBS. El orden de las cosas y el comportamiento son los mismos; solo desaparece la espera infinita. Está en [`streamelements/StreamElementsVideoComposition.cpp`](streamelements/StreamElementsVideoComposition.cpp).
+**El arreglo:** SE.Live suelta la escena antes de pedirle nada a OBS. El orden de las cosas y el comportamiento son los mismos; solo desaparece la espera infinita. Está en [`streamelements/SEVideoComposition.cpp`](streamelements/SEVideoComposition.cpp).
 
 ## 🇪🇸 Cómo instalarlo
 
-1. Ten instalado SE.Live normal (la versión oficial) en OBS 32.
+1. Ten instalado SE.Live normal (la versión oficial) en OBS 33.
 2. Descarga **SE.Live-arreglado.zip** de [Releases](../../releases/latest).
 3. **Cierra OBS.**
 4. Copia `obs-streamelements-core.dll` (y `.pdb`) del zip en la carpeta de plugins de OBS, normalmente
@@ -31,7 +31,7 @@ Si actualizas SE.Live con su instalador oficial, se volverá a poner el archivo 
 
 **Fixes:** OBS freezing (not crashing) with SE.Live when a custom canvas, such as the vertical one, uses a real transition: when enabling OBS transitions on the vertical canvas, on start-up with that option saved, and when switching scenes quickly. The cause was a lock-order deadlock between the UI thread (`SetCurrentScene` holding the current-scene lock across `obs_transition_start`) and the graphics thread (`transition_stop` → `GetCurrentSceneRef`). The fix releases the lock before calling into libobs.
 
-**Install:** close OBS, copy `obs-streamelements-core.dll` from **SE.Live-arreglado.zip** ([Releases](../../releases/latest)) over the one in `C:\Program Files\obs-studio\obs-plugins\64bit\`, and start OBS. Keep a backup of the original. Built for OBS 32 (Windows x64), with crash reporting disabled.
+**Install:** close OBS, copy `obs-streamelements-core.dll` from **SE.Live-arreglado.zip** ([Releases](../../releases/latest)) over the one in `C:\Program Files\obs-studio\obs-plugins\64bit\`, and start OBS. Keep a backup of the original. Built for OBS 33 (Windows x64), with crash reporting disabled.
 
 ---
 

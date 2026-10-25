@@ -4,7 +4,7 @@ Qué arregla: OBS ya no se queda congelado al usar transiciones en el lienzo ver
 al abrir OBS con esa opción activa ni al cambiar de escena muy rápido.
 
 Cómo instalarlo:
-1. Ten instalado SE.Live oficial en OBS 32 (Windows).
+1. Ten instalado SE.Live oficial en OBS 33 (Windows).
 2. Cierra OBS.
 3. Copia obs-streamelements-core.dll (y .pdb) en
    C:\Program Files\obs-studio\obs-plugins\64bit\
