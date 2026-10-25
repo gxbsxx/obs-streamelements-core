@@ -43,7 +43,7 @@ jobs:
         run: |
           mkdir C:\local\obs-studio\plugins\obs-streamelements-core
           xcopy "%GITHUB_WORKSPACE%\*.*" "C:\local\obs-studio\plugins\obs-streamelements-core" /S /E /I /Y
-          echo add_obs_plugin(obs-streamelements-core) > C:\local\obs-studio\plugins\CMakeLists.txt
+          echo add_core_module(obs-streamelements-core) > C:\local\obs-studio\plugins\CMakeLists.txt
 
       - name: Version
         shell: powershell
@@ -51,19 +51,21 @@ jobs:
           "#define STREAMELEMENTS_PLUGIN_VERSION 20261006001039L" |
             Out-File C:\local\obs-studio\plugins\obs-streamelements-core\streamelements\Version.generated.hpp
 
+      # Si falla, los errores salen como avisos (::error::) para poder leerlos sin descargar el log.
       - name: Configure
-        shell: cmd
+        shell: pwsh
         run: |
-          copy C:\local\obs-studio\plugins\obs-streamelements-core\CMakeUserPresets.json C:\local\obs-studio\CMakeUserPresets.json
-          del C:\local\obs-studio\plugins\obs-streamelements-core\CMakeUserPresets.json
-          cd /d C:\local\obs-studio
-          cmake --preset=windows-x64-streamelements -DSTREAMELEMENTS_CRASH_HANDLER=none %BUILD_OPTIONS%
+          Move-Item C:\local\obs-studio\plugins\obs-streamelements-core\CMakeUserPresets.json C:\local\obs-studio\CMakeUserPresets.json
+          cd C:\local\obs-studio
+          cmake --preset=windows-x64-streamelements -DSTREAMELEMENTS_CRASH_HANDLER=none $env:BUILD_OPTIONS.Split(' ') 2>&1 | Tee-Object C:\local\configure.log
+          if ($LASTEXITCODE) { Select-String C:\local\configure.log -Pattern 'CMake Error' -Context 0,6 | Select-Object -First 8 | % { "::error::" + (@($_.Line) + $_.Context.PostContext -join ' | ') }; exit 1 }
 
       - name: Build
-        shell: cmd
+        shell: pwsh
         run: |
-          cd /d C:\local\obs-studio
-          cmake --build build_x64 --config RelWithDebInfo --target obs-streamelements-core
+          cd C:\local\obs-studio
+          cmake --build build_x64 --config RelWithDebInfo --target obs-streamelements-core 2>&1 | Tee-Object C:\local\build.log
+          if ($LASTEXITCODE) { Select-String C:\local\build.log -Pattern 'error [A-Z]+[0-9]+|CMake Error' | Select-Object -First 15 | % { "::error::" + $_.Line }; exit 1 }
 
       - uses: actions/upload-artifact@v4
         with:
