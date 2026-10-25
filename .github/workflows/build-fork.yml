@@ -44,6 +44,7 @@ jobs:
           mkdir C:\local\obs-studio\plugins\obs-streamelements-core
           xcopy "%GITHUB_WORKSPACE%\*.*" "C:\local\obs-studio\plugins\obs-streamelements-core" /S /E /I /Y
           echo add_core_module(obs-streamelements-core) > C:\local\obs-studio\plugins\CMakeLists.txt
+          echo set_obs_core_modules() >> C:\local\obs-studio\plugins\CMakeLists.txt
 
       - name: Version
         shell: powershell
