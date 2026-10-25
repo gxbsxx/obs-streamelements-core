@@ -6,9 +6,11 @@ al abrir OBS con esa opción activa ni al cambiar de escena muy rápido.
 Cómo instalarlo:
 1. Ten instalado SE.Live oficial en OBS 33 (Windows).
 2. Cierra OBS.
-3. Copia obs-streamelements-core.dll (y .pdb) en
-   C:\Program Files\obs-studio\obs-plugins\64bit\
-   y elige Reemplazar. Guarda antes una copia del original.
+3. Abre "Instalar arreglo.exe" (esta misma carpeta) y acepta el permiso
+   de administrador. Guarda una copia del original y pone el arreglo.
 4. Abre OBS.
+
+A mano: copia obs-streamelements-core.dll (y .pdb) en
+C:\Program Files\obs-studio\obs-plugins\64bit\ y elige Reemplazar.
 
 Más información: https://github.com/gxbsxx/obs-streamelements-core

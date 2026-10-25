@@ -85,13 +85,22 @@ jobs:
           TAG: v26.10.6.1039-obs33
           TITLE: SE.Live 26.10.6.1039 Vertical Canvas Fix (OBS 33)
         run: |
-          gh release view $env:TAG 2>$null
-          if ($LASTEXITCODE -eq 0) { gh release edit $env:TAG --title $env:TITLE --notes-file .github/RELEASE_FORK.md; exit $LASTEXITCODE } # ya existe: solo pone al día el título y la explicación
           $d = "C:\local\SE.Live-arreglado"
           New-Item -ItemType Directory $d | Out-Null
           # OBS 33 puede cambiar la carpeta de salida: busca los archivos donde estén.
           Get-ChildItem C:\local\obs-studio\build_x64\rundir -Recurse -Include obs-streamelements-core.dll, obs-streamelements-core.pdb | Copy-Item -Destination $d
           Copy-Item .github\LEEME.txt $d
+          # El instalador: un .exe pequeño que pide permiso de administrador y copia el arreglo.
+          $vc = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -find VC\Auxiliary\Build\vcvars64.bat
+          cmd /c "call `"$vc`" >nul && cl /nologo /O2 /W3 /utf-8 /DUNICODE /D_UNICODE .github\installer\instalar.c /Fe:`"$d\Instalar arreglo.exe`" /link /SUBSYSTEM:WINDOWS user32.lib advapi32.lib /MANIFEST:EMBED `"/MANIFESTUAC:level='requireAdministrator' uiAccess='false'`""
+          if (-not (Test-Path "$d\Instalar arreglo.exe")) { throw "No se pudo crear el instalador" }
           Compress-Archive -Path $d -DestinationPath C:\local\SE.Live-arreglado.zip
-          gh release create $env:TAG C:\local\SE.Live-arreglado.zip --target $env:GITHUB_SHA --title $env:TITLE --notes-file .github/RELEASE_FORK.md
+          gh release view $env:TAG 2>$null
+          if ($LASTEXITCODE -eq 0) {
+            # Ya existe: pone al día el título, la explicación y el zip.
+            gh release edit $env:TAG --title $env:TITLE --notes-file .github/RELEASE_FORK.md
+            gh release upload $env:TAG C:\local\SE.Live-arreglado.zip --clobber
+          } else {
+            gh release create $env:TAG C:\local\SE.Live-arreglado.zip --target $env:GITHUB_SHA --title $env:TITLE --notes-file .github/RELEASE_FORK.md
+          }
           if ($LASTEXITCODE -ne 0) { throw "No se pudo publicar la versión" }
